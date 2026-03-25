@@ -1,4 +1,4 @@
-const pool = require('../db/connection');
+const pool = require('../config/db');
 
 // 1. GET /botanas
 const getAll = async (req, res) => {
