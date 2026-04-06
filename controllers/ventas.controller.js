@@ -1,115 +1,74 @@
-const pool = require('../config/db');
+const ventasService = require('../services/ventas.service');
 
-// 1. GET /ventas
-const getAll = async (req, res) => {
+const getAll = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Ventas ORDER BY fecha DESC');
-    res.status(200).json(rows);
+    const ventas = await ventasService.getAll();
+    res.status(200).json(ventas);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener ventas', detail: err.message });
+    next(err);
   }
 };
 
-// 2. GET /ventas/:id
-const getById = async (req, res) => {
+const getById = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Ventas WHERE id_venta = ?', [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Venta no encontrada' });
-    res.status(200).json(rows[0]);
+    const venta = await ventasService.getById(req.params.id);
+    res.status(200).json(venta);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener venta', detail: err.message });
+    next(err);
   }
 };
 
-// 3. POST /ventas
-const create = async (req, res) => {
-  const { fecha, total, id_cliente, id_empleado } = req.body;
-  if (!fecha || total == null || !id_cliente || !id_empleado)
-    return res.status(400).json({ error: 'Faltan campos requeridos: fecha, total, id_cliente, id_empleado' });
+const create = async (req, res, next) => {
   try {
-    const [result] = await pool.query(
-      'INSERT INTO Ventas (fecha, total, id_cliente, id_empleado) VALUES (?, ?, ?, ?)',
-      [fecha, total, id_cliente, id_empleado]
-    );
-    res.status(201).json({ id_venta: result.insertId, fecha, total, id_cliente, id_empleado });
+    const venta = await ventasService.create(req.body);
+    res.status(201).json(venta);
   } catch (err) {
-    res.status(500).json({ error: 'Error al crear venta', detail: err.message });
+    next(err);
   }
 };
 
-// 4. PUT /ventas/:id
-const update = async (req, res) => {
-  const { fecha, total, id_cliente, id_empleado } = req.body;
-  if (!fecha || total == null || !id_cliente || !id_empleado)
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+const update = async (req, res, next) => {
   try {
-    const [result] = await pool.query(
-      'UPDATE Ventas SET fecha=?, total=?, id_cliente=?, id_empleado=? WHERE id_venta=?',
-      [fecha, total, id_cliente, id_empleado, req.params.id]
-    );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Venta no encontrada' });
-    res.status(200).json({ message: 'Venta actualizada correctamente' });
+    const result = await ventasService.update(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar venta', detail: err.message });
+    next(err);
   }
 };
 
-// 5. PATCH /ventas/:id
-const patch = async (req, res) => {
-  const fields = req.body;
-  const allowed = ['fecha', 'total', 'id_cliente', 'id_empleado'];
-  const updates = Object.keys(fields).filter(k => allowed.includes(k));
-  if (updates.length === 0) return res.status(400).json({ error: 'Sin campos válidos para actualizar' });
+const patch = async (req, res, next) => {
   try {
-    const sql = `UPDATE Ventas SET ${updates.map(k => `${k}=?`).join(', ')} WHERE id_venta=?`;
-    const [result] = await pool.query(sql, [...updates.map(k => fields[k]), req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Venta no encontrada' });
-    res.status(200).json({ message: 'Venta actualizada parcialmente' });
+    const result = await ventasService.patch(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar venta', detail: err.message });
+    next(err);
   }
 };
 
-// 6. DELETE /ventas/:id
-const remove = async (req, res) => {
+const remove = async (req, res, next) => {
   try {
-    const [result] = await pool.query('DELETE FROM Ventas WHERE id_venta=?', [req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Venta no encontrada' });
-    res.status(200).json({ message: 'Venta eliminada correctamente' });
+    const result = await ventasService.remove(req.params.id);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al eliminar venta', detail: err.message });
+    next(err);
   }
 };
 
-// 7. GET /ventas/:id/detalle — Custom: detalle de una venta
-const getDetalle = async (req, res) => {
+const getDetalle = async (req, res, next) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT dv.*, p.nombre_producto, p.tipo
-       FROM Detalle_Ventas dv
-       JOIN Productos p ON dv.id_producto = p.id_producto
-       WHERE dv.id_venta = ?`,
-      [req.params.id]
-    );
-    if (rows.length === 0) return res.status(404).json({ error: 'No hay detalle para esta venta' });
-    res.status(200).json(rows);
+    const detalle = await ventasService.getDetalle(req.params.id);
+    res.status(200).json(detalle);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener detalle', detail: err.message });
+    next(err);
   }
 };
 
-// 8. GET /ventas/reporte/total — Custom: total vendido por fecha
-const getReporte = async (req, res) => {
+const getReporte = async (req, res, next) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT DATE(fecha) AS dia, COUNT(*) AS num_ventas, SUM(total) AS total_dia
-       FROM Ventas
-       GROUP BY DATE(fecha)
-       ORDER BY dia DESC`
-    );
-    res.status(200).json(rows);
+    const reporte = await ventasService.getReporte();
+    res.status(200).json(reporte);
   } catch (err) {
-    res.status(500).json({ error: 'Error al generar reporte', detail: err.message });
+    next(err);
   }
 };
 

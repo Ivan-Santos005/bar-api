@@ -1,107 +1,74 @@
-const pool = require('../config/db');
+const bebidasService = require('../services/bebidas.service');
 
-// 1. GET /bebidas
-const getAll = async (req, res) => {
+const getAll = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Bebidas');
-    res.status(200).json(rows);
+    const bebidas = await bebidasService.getAll();
+    res.status(200).json(bebidas);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener bebidas', detail: err.message });
+    next(err);
   }
 };
 
-// 2. GET /bebidas/:id
-const getById = async (req, res) => {
+const getById = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Bebidas WHERE id_bebida = ?', [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Bebida no encontrada' });
-    res.status(200).json(rows[0]);
+    const bebida = await bebidasService.getById(req.params.id);
+    res.status(200).json(bebida);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener bebida', detail: err.message });
+    next(err);
   }
 };
 
-// 3. POST /bebidas
-const create = async (req, res) => {
-  const { id_bebida, nombre, tipo, cantidad, unidad, precio } = req.body;
-  if (!id_bebida || !nombre || !tipo || cantidad == null || !unidad || precio == null)
-    return res.status(400).json({ error: 'Faltan campos requeridos: id_bebida, nombre, tipo, cantidad, unidad, precio' });
+const create = async (req, res, next) => {
   try {
-    await pool.query(
-      'INSERT INTO Bebidas (id_bebida, nombre, tipo, cantidad, unidad, precio) VALUES (?, ?, ?, ?, ?, ?)',
-      [id_bebida, nombre, tipo, cantidad, unidad, precio]
-    );
-    res.status(201).json({ id_bebida, nombre, tipo, cantidad, unidad, precio });
+    const bebida = await bebidasService.create(req.body);
+    res.status(201).json(bebida);
   } catch (err) {
-    res.status(500).json({ error: 'Error al crear bebida', detail: err.message });
+    next(err);
   }
 };
 
-// 4. PUT /bebidas/:id
-const update = async (req, res) => {
-  const { nombre, tipo, cantidad, unidad, precio } = req.body;
-  if (!nombre || !tipo || cantidad == null || !unidad || precio == null)
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+const update = async (req, res, next) => {
   try {
-    const [result] = await pool.query(
-      'UPDATE Bebidas SET nombre=?, tipo=?, cantidad=?, unidad=?, precio=? WHERE id_bebida=?',
-      [nombre, tipo, cantidad, unidad, precio, req.params.id]
-    );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Bebida no encontrada' });
-    res.status(200).json({ message: 'Bebida actualizada correctamente' });
+    const result = await bebidasService.update(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar bebida', detail: err.message });
+    next(err);
   }
 };
 
-// 5. PATCH /bebidas/:id
-const patch = async (req, res) => {
-  const fields = req.body;
-  const allowed = ['nombre', 'tipo', 'cantidad', 'unidad', 'precio'];
-  const updates = Object.keys(fields).filter(k => allowed.includes(k));
-  if (updates.length === 0) return res.status(400).json({ error: 'Sin campos válidos para actualizar' });
+const patch = async (req, res, next) => {
   try {
-    const sql = `UPDATE Bebidas SET ${updates.map(k => `${k}=?`).join(', ')} WHERE id_bebida=?`;
-    const [result] = await pool.query(sql, [...updates.map(k => fields[k]), req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Bebida no encontrada' });
-    res.status(200).json({ message: 'Bebida actualizada parcialmente' });
+    const result = await bebidasService.patch(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar bebida', detail: err.message });
+    next(err);
   }
 };
 
-// 6. DELETE /bebidas/:id
-const remove = async (req, res) => {
+const remove = async (req, res, next) => {
   try {
-    const [result] = await pool.query('DELETE FROM Bebidas WHERE id_bebida=?', [req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Bebida no encontrada' });
-    res.status(200).json({ message: 'Bebida eliminada correctamente' });
+    const result = await bebidasService.remove(req.params.id);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al eliminar bebida', detail: err.message });
+    next(err);
   }
 };
 
-// 7. GET /bebidas/tipo/:tipo — Custom: filtrar por tipo
-const getByTipo = async (req, res) => {
+const getByTipo = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Bebidas WHERE tipo = ?', [req.params.tipo]);
-    if (rows.length === 0) return res.status(404).json({ error: 'No hay bebidas de ese tipo' });
-    res.status(200).json(rows);
+    const bebidas = await bebidasService.getByTipo(req.params.tipo);
+    res.status(200).json(bebidas);
   } catch (err) {
-    res.status(500).json({ error: 'Error al filtrar bebidas', detail: err.message });
+    next(err);
   }
 };
 
-// 8. GET /bebidas/:id/ingredientes — Custom: ingredientes de una bebida
-const getIngredientes = async (req, res) => {
+const getIngredientes = async (req, res, next) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM Ingredientes_Bebidas WHERE id_bebida = ?', [req.params.id]
-    );
-    if (rows.length === 0) return res.status(404).json({ error: 'No se encontraron ingredientes para esta bebida' });
-    res.status(200).json(rows);
+    const ingredientes = await bebidasService.getIngredientes(req.params.id);
+    res.status(200).json(ingredientes);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener ingredientes', detail: err.message });
+    next(err);
   }
 };
 

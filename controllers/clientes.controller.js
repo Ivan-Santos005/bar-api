@@ -1,110 +1,74 @@
-const pool = require('../config/db');
+const clientesService = require('../services/clientes.service');
 
-// 1. GET /clientes
-const getAll = async (req, res) => {
+const getAll = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Clientes');
-    res.status(200).json(rows);
+    const clientes = await clientesService.getAll();
+    res.status(200).json(clientes);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener clientes', detail: err.message });
+    next(err);
   }
 };
 
-// 2. GET /clientes/:id
-const getById = async (req, res) => {
+const getById = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Clientes WHERE id_cliente = ?', [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
-    res.status(200).json(rows[0]);
+    const cliente = await clientesService.getById(req.params.id);
+    res.status(200).json(cliente);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener cliente', detail: err.message });
+    next(err);
   }
 };
 
-// 3. POST /clientes
-const create = async (req, res) => {
-  const { nombre, apellido, telefono, correo_electronico, fecha_registro } = req.body;
-  if (!nombre || !apellido || !fecha_registro)
-    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, apellido, fecha_registro' });
+const create = async (req, res, next) => {
   try {
-    const [result] = await pool.query(
-      'INSERT INTO Clientes (nombre, apellido, telefono, correo_electronico, fecha_registro) VALUES (?, ?, ?, ?, ?)',
-      [nombre, apellido, telefono || null, correo_electronico || null, fecha_registro]
-    );
-    res.status(201).json({ id_cliente: result.insertId, nombre, apellido, telefono, correo_electronico, fecha_registro });
+    const cliente = await clientesService.create(req.body);
+    res.status(201).json(cliente);
   } catch (err) {
-    res.status(500).json({ error: 'Error al crear cliente', detail: err.message });
+    next(err);
   }
 };
 
-// 4. PUT /clientes/:id
-const update = async (req, res) => {
-  const { nombre, apellido, telefono, correo_electronico, fecha_registro } = req.body;
-  if (!nombre || !apellido || !fecha_registro)
-    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, apellido, fecha_registro' });
+const update = async (req, res, next) => {
   try {
-    const [result] = await pool.query(
-      'UPDATE Clientes SET nombre=?, apellido=?, telefono=?, correo_electronico=?, fecha_registro=? WHERE id_cliente=?',
-      [nombre, apellido, telefono || null, correo_electronico || null, fecha_registro, req.params.id]
-    );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
-    res.status(200).json({ message: 'Cliente actualizado correctamente' });
+    const result = await clientesService.update(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar cliente', detail: err.message });
+    next(err);
   }
 };
 
-// 5. PATCH /clientes/:id
-const patch = async (req, res) => {
-  const fields = req.body;
-  const allowed = ['nombre', 'apellido', 'telefono', 'correo_electronico', 'fecha_registro'];
-  const updates = Object.keys(fields).filter(k => allowed.includes(k));
-  if (updates.length === 0) return res.status(400).json({ error: 'Sin campos válidos para actualizar' });
+const patch = async (req, res, next) => {
   try {
-    const sql = `UPDATE Clientes SET ${updates.map(k => `${k}=?`).join(', ')} WHERE id_cliente=?`;
-    const [result] = await pool.query(sql, [...updates.map(k => fields[k]), req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
-    res.status(200).json({ message: 'Cliente actualizado parcialmente' });
+    const result = await clientesService.patch(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar cliente', detail: err.message });
+    next(err);
   }
 };
 
-// 6. DELETE /clientes/:id
-const remove = async (req, res) => {
+const remove = async (req, res, next) => {
   try {
-    const [result] = await pool.query('DELETE FROM Clientes WHERE id_cliente=?', [req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
-    res.status(200).json({ message: 'Cliente eliminado correctamente' });
+    const result = await clientesService.remove(req.params.id);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al eliminar cliente', detail: err.message });
+    next(err);
   }
 };
 
-// 7. GET /clientes/:id/ventas — Custom: historial de ventas del cliente
-const getVentas = async (req, res) => {
+const getVentas = async (req, res, next) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM Ventas WHERE id_cliente = ? ORDER BY fecha DESC', [req.params.id]
-    );
-    res.status(200).json(rows);
+    const ventas = await clientesService.getVentas(req.params.id);
+    res.status(200).json(ventas);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener ventas del cliente', detail: err.message });
+    next(err);
   }
 };
 
-// 8. GET /clientes/buscar?nombre=xxx — Custom: buscar por nombre
-const search = async (req, res) => {
-  const { nombre } = req.query;
-  if (!nombre) return res.status(400).json({ error: 'Se requiere el parámetro nombre' });
+const search = async (req, res, next) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM Clientes WHERE nombre LIKE ? OR apellido LIKE ?',
-      [`%${nombre}%`, `%${nombre}%`]
-    );
-    res.status(200).json(rows);
+    const clientes = await clientesService.search(req.query.nombre);
+    res.status(200).json(clientes);
   } catch (err) {
-    res.status(500).json({ error: 'Error al buscar cliente', detail: err.message });
+    next(err);
   }
 };
 

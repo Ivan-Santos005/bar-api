@@ -1,107 +1,74 @@
-const pool = require('../config/db');
+const botanasService = require('../services/botanas.service');
 
-// 1. GET /botanas
-const getAll = async (req, res) => {
+const getAll = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Botanas');
-    res.status(200).json(rows);
+    const botanas = await botanasService.getAll();
+    res.status(200).json(botanas);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener botanas', detail: err.message });
+    next(err);
   }
 };
 
-// 2. GET /botanas/:id
-const getById = async (req, res) => {
+const getById = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Botanas WHERE id_botana = ?', [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Botana no encontrada' });
-    res.status(200).json(rows[0]);
+    const botana = await botanasService.getById(req.params.id);
+    res.status(200).json(botana);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener botana', detail: err.message });
+    next(err);
   }
 };
 
-// 3. POST /botanas
-const create = async (req, res) => {
-  const { id_botana, nombre, ingredientes_principales, cantidad, unidad, precio } = req.body;
-  if (!id_botana || !nombre || precio == null)
-    return res.status(400).json({ error: 'Faltan campos requeridos: id_botana, nombre, precio' });
+const create = async (req, res, next) => {
   try {
-    await pool.query(
-      'INSERT INTO Botanas (id_botana, nombre, ingredientes_principales, cantidad, unidad, precio) VALUES (?, ?, ?, ?, ?, ?)',
-      [id_botana, nombre, ingredientes_principales || null, cantidad || null, unidad || null, precio]
-    );
-    res.status(201).json({ id_botana, nombre, ingredientes_principales, cantidad, unidad, precio });
+    const botana = await botanasService.create(req.body);
+    res.status(201).json(botana);
   } catch (err) {
-    res.status(500).json({ error: 'Error al crear botana', detail: err.message });
+    next(err);
   }
 };
 
-// 4. PUT /botanas/:id
-const update = async (req, res) => {
-  const { nombre, ingredientes_principales, cantidad, unidad, precio } = req.body;
-  if (!nombre || precio == null)
-    return res.status(400).json({ error: 'Faltan campos requeridos: nombre, precio' });
+const update = async (req, res, next) => {
   try {
-    const [result] = await pool.query(
-      'UPDATE Botanas SET nombre=?, ingredientes_principales=?, cantidad=?, unidad=?, precio=? WHERE id_botana=?',
-      [nombre, ingredientes_principales || null, cantidad || null, unidad || null, precio, req.params.id]
-    );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Botana no encontrada' });
-    res.status(200).json({ message: 'Botana actualizada correctamente' });
+    const result = await botanasService.update(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar botana', detail: err.message });
+    next(err);
   }
 };
 
-// 5. PATCH /botanas/:id
-const patch = async (req, res) => {
-  const fields = req.body;
-  const allowed = ['nombre', 'ingredientes_principales', 'cantidad', 'unidad', 'precio'];
-  const updates = Object.keys(fields).filter(k => allowed.includes(k));
-  if (updates.length === 0) return res.status(400).json({ error: 'Sin campos válidos para actualizar' });
+const patch = async (req, res, next) => {
   try {
-    const sql = `UPDATE Botanas SET ${updates.map(k => `${k}=?`).join(', ')} WHERE id_botana=?`;
-    const [result] = await pool.query(sql, [...updates.map(k => fields[k]), req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Botana no encontrada' });
-    res.status(200).json({ message: 'Botana actualizada parcialmente' });
+    const result = await botanasService.patch(req.params.id, req.body);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar botana', detail: err.message });
+    next(err);
   }
 };
 
-// 6. DELETE /botanas/:id
-const remove = async (req, res) => {
+const remove = async (req, res, next) => {
   try {
-    const [result] = await pool.query('DELETE FROM Botanas WHERE id_botana=?', [req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Botana no encontrada' });
-    res.status(200).json({ message: 'Botana eliminada correctamente' });
+    const result = await botanasService.remove(req.params.id);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Error al eliminar botana', detail: err.message });
+    next(err);
   }
 };
 
-// 7. GET /botanas/buscar?nombre=xxx — Custom: buscar por nombre
-const search = async (req, res) => {
-  const { nombre } = req.query;
-  if (!nombre) return res.status(400).json({ error: 'Se requiere el parámetro nombre' });
+const search = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Botanas WHERE nombre LIKE ?', [`%${nombre}%`]);
-    res.status(200).json(rows);
+    const botanas = await botanasService.search(req.query.nombre);
+    res.status(200).json(botanas);
   } catch (err) {
-    res.status(500).json({ error: 'Error al buscar botana', detail: err.message });
+    next(err);
   }
 };
 
-// 8. GET /botanas/precio?max=xxx — Custom: filtrar por precio máximo
-const getByPrecioMax = async (req, res) => {
-  const { max } = req.query;
-  if (!max || isNaN(max)) return res.status(400).json({ error: 'Se requiere el parámetro max (numérico)' });
+const getByPrecioMax = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM Botanas WHERE precio <= ? ORDER BY precio ASC', [max]);
-    res.status(200).json(rows);
+    const botanas = await botanasService.getByPrecioMax(req.query.max);
+    res.status(200).json(botanas);
   } catch (err) {
-    res.status(500).json({ error: 'Error al filtrar botanas', detail: err.message });
+    next(err);
   }
 };
 

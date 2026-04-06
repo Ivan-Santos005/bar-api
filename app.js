@@ -1,9 +1,13 @@
 require('dotenv').config();
 const express = require('express');
 const hbs = require('hbs');
+const notFound = require('./middlewares/notFound');
+const errorHandler = require('./middlewares/errorHandler');
 const app = express();
 
+// middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 // Configuración de Handlebars
 app.set('view engine', 'hbs');
@@ -161,9 +165,8 @@ Content-Type: application/json
 });
 
 // Manejo de rutas no encontradas
-app.use((req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
 

@@ -10,7 +10,7 @@ Los servicios separan la lógica compleja de los controladores, permitiendo:
 - Lógica reutilizable
 - Manejo de transacciones
 
-## Estructura recomendada
+## Estructura 
 
 ```javascript
 // services/ventas.service.js
