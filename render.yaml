@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: bar-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DB_HOST
+        value: localhost
+      - key: DB_PORT
+        value: 3306
+      - key: DB_USER
+        value: root
+      - key: DB_PASSWORD
+        scope: secret
+      - key: DB_NAME
+        value: Bar
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
